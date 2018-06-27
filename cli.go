@@ -7,45 +7,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
-)
 
-var helpText = `
-Usage: ghead [file ...]
-`
-
-var replacer = strings.NewReplacer(
-	"@", " ",
-	"_", " ",
-	",", " ",
-	".", " ",
-	"-", " ",
-	"+", " ",
-	"=", " ",
-	"&", " ",
-	"$", " ",
-	"*", " ",
-	"^", " ",
-	"#", " ",
-	"!", " ",
-	"?", " ",
-	"/", " ",
-	"\\", " ",
-	"|", " ",
-	"(", " ",
-	")", " ",
-	"[", " ",
-	"]", " ",
-	"{", " ",
-	"}", " ",
-	"<", " ",
-	">", " ",
-	"~", " ",
-	"`", " ",
-	";", " ",
-	":", " ",
-	"\"", " ",
-	"'", " ",
-	"	", " ",
+	"github.com/fatih/camelcase"
 )
 
 const (
@@ -54,7 +17,12 @@ const (
 	ExitCodeFileOpenError
 )
 
-var replaceRegex = regexp.MustCompile(" +")
+var helpText = `
+Usage: ghead [file ...]
+`
+
+var replaceCharRegex = regexp.MustCompile("[^a-zA-Z]")
+var replaceSpaceRegex = regexp.MustCompile(" +")
 
 type CLI struct {
 	outStream, errStream io.Writer
@@ -67,14 +35,16 @@ func (cli *CLI) Run(args []string) int {
 	}
 
 	for _, filename := range args[1:] {
-		file, err := os.Open(filename)
-		if err != nil {
+		file, oErr := os.Open(filename)
+		if oErr != nil {
 			return ExitCodeFileOpenError
 		}
 		defer file.Close()
-
 		tokens := tokenize(file)
-		tokens[0] = "a"
+		cErr := check(tokens)
+		if cErr != nil {
+			return ExitCodeFileOpenError
+		}
 	}
 
 	return ExitCodeOk
@@ -85,12 +55,23 @@ func tokenize(file io.Reader) []string {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		filtered := replacer.Replace(line)
-		filtered = replaceRegex.ReplaceAllString(filtered, " ")
+		filtered := replaceCharRegex.ReplaceAllString(line, " ")
+		filtered = replaceSpaceRegex.ReplaceAllString(filtered, " ")
 		filtered = strings.Trim(filtered, " ")
-		tokens = append(tokens, filtered)
-		fmt.Println(filtered)
+		if filtered != "" {
+			tokens = append(tokens, filtered)
+		}
+	}
+	return tokens
+}
+
+func check(tokens []string) error {
+	for _, token := range tokens {
+		for _, word := range strings.Split(token, " ") {
+			for _, w := range camelcase.Split(word) {
+			}
+		}
 	}
 
-	return tokens
+	return nil
 }
