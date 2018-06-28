@@ -15,14 +15,14 @@ const (
 	ExitCodeOk = iota
 	ExitCodeNoArg
 	ExitCodeFileOpenError
+	ExitCodeTokenizeError
 )
 
 var helpText = `
 Usage: ghead [file ...]
 `
 
-var replaceCharRegex = regexp.MustCompile("[^a-zA-Z]")
-var replaceSpaceRegex = regexp.MustCompile(" +")
+var replaceRegex = regexp.MustCompile("[^a-zA-Z]")
 
 type CLI struct {
 	outStream, errStream io.Writer
@@ -40,41 +40,42 @@ func (cli *CLI) Run(args []string) int {
 			return ExitCodeFileOpenError
 		}
 		defer file.Close()
-		tokens := tokenize(file)
-		cErr := check(tokens)
-		if cErr != nil {
-			return ExitCodeFileOpenError
+
+		tokens, tErr := tokenize(file)
+		if tErr != nil {
+			return ExitCodeTokenizeError
+		}
+
+		typos := make([]string, 10, 10)
+		for _, token := range tokens {
+			typos = append(typos, check(token))
 		}
 	}
 
 	return ExitCodeOk
 }
 
-func tokenize(file io.Reader) []string {
+func tokenize(file io.Reader) ([]string, error) {
 	tokens := make([]string, 200, 1000)
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
-		filtered := replaceCharRegex.ReplaceAllString(line, " ")
-		filtered = replaceSpaceRegex.ReplaceAllString(filtered, " ")
-		filtered = strings.Trim(filtered, " ")
-		if len(filtered) > 2 {
-			tokens = append(tokens, filtered)
-		}
-	}
-	return tokens
-}
 
-func check(tokens []string) error {
-	for _, token := range tokens {
-		for _, word := range strings.Split(token, " ") {
-			for _, w := range camelcase.Split(word) {
-				if len(w) > 2 {
-					fmt.Println(w)
-				}
+		if err := scanner.Err(); err != nil {
+			return nil, err
+		}
+
+		filtered := replaceRegex.ReplaceAllString(line, " ")
+		for _, symbol := range strings.Split(filtered, " ") {
+			for _, word := range camelcase.Split(symbol) {
+				// スペース、空配列以外を lowercase にして tokens に入れる
 			}
 		}
 	}
 
-	return nil
+	return tokens, nil
+}
+
+func check(token string) string {
+	return ""
 }
