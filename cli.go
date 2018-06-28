@@ -58,7 +58,7 @@ func tokenize(file io.Reader) []string {
 		filtered := replaceCharRegex.ReplaceAllString(line, " ")
 		filtered = replaceSpaceRegex.ReplaceAllString(filtered, " ")
 		filtered = strings.Trim(filtered, " ")
-		if filtered != "" {
+		if len(filtered) > 2 {
 			tokens = append(tokens, filtered)
 		}
 	}
@@ -69,6 +69,9 @@ func check(tokens []string) error {
 	for _, token := range tokens {
 		for _, word := range strings.Split(token, " ") {
 			for _, w := range camelcase.Split(word) {
+				if len(w) > 2 {
+					fmt.Println(w)
+				}
 			}
 		}
 	}
