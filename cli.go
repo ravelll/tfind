@@ -23,9 +23,22 @@ Usage: ghead [file ...]
 `
 
 var replaceRegex = regexp.MustCompile("[^a-zA-Z]")
+var dict = make([]string, 0, 40000)
 
 type CLI struct {
 	outStream, errStream io.Writer
+}
+
+func init() {
+	f, err := os.Open("assets/dict.txt")
+	if err != nil {
+		panic(err)
+	}
+
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		dict = append(dict, s.Text())
+	}
 }
 
 func (cli *CLI) Run(args []string) int {
@@ -68,7 +81,9 @@ func tokenize(file io.Reader) ([]string, error) {
 		filtered := replaceRegex.ReplaceAllString(line, " ")
 		for _, symbol := range strings.Split(filtered, " ") {
 			for _, word := range camelcase.Split(symbol) {
-				// スペース、空配列以外を lowercase にして tokens に入れる
+				if len(word) >= 3 {
+					tokens = append(tokens, strings.ToLower(word))
+				}
 			}
 		}
 	}
@@ -77,5 +92,13 @@ func tokenize(file io.Reader) ([]string, error) {
 }
 
 func check(token string) string {
+	for _, w := range dict {
+		if w == token {
+			return ""
+		}
+	}
+
+	fmt.Println(token)
+
 	return ""
 }
